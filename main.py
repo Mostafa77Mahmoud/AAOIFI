@@ -17,6 +17,7 @@ from src.config import (
     JSON_OUTPUT_DIR,
     LOGS_DIR,
     TOTAL_STANDARDS,
+    GEMINI_API_KEY,
 )
 from src.pdf_processor import process_pdf_with_gemini
 from src.json_builder import (
@@ -124,6 +125,15 @@ def main():
     logger.info("Starting AAOIFI Standards PDF to JSON Processor")
     logger.info(f"PDF Input Directory: {PDF_INPUT_DIR.absolute()}")
     logger.info(f"JSON Output Directory: {JSON_OUTPUT_DIR.absolute()}")
+    
+    if not GEMINI_API_KEY:
+        print("\n" + "=" * 60)
+        print("تحذير: مفتاح GEMINI_API_KEY غير موجود!")
+        print("Warning: GEMINI_API_KEY is not set!")
+        print("Please add GEMINI_API_KEY to your environment secrets.")
+        print("=" * 60)
+        logger.warning("GEMINI_API_KEY is not configured. Processing cannot continue.")
+        return
     
     pdf_files = get_pdf_files()
     

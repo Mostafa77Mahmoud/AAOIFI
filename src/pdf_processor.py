@@ -90,10 +90,10 @@ def process_pdf_with_gemini(pdf_path: Path, standard_number: int) -> Optional[di
 
     file_size_mb = get_file_size_mb(pdf_path)
     
-    api_client = get_client()
-    
     for attempt in range(MAX_RETRIES):
         try:
+            api_client = get_client()
+            
             if file_size_mb > MAX_INLINE_SIZE_MB:
                 uploaded_file = upload_file_to_gemini(pdf_path)
                 if not uploaded_file or not uploaded_file.uri:

@@ -38,16 +38,40 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
+def convert_hindi_to_arabic_numerals(text: str) -> str:
+    hindi_to_arabic = {
+        '٠': '0', '١': '1', '٢': '2', '٣': '3', '٤': '4',
+        '٥': '5', '٦': '6', '٧': '7', '٨': '8', '٩': '9'
+    }
+    for hindi, arabic in hindi_to_arabic.items():
+        text = text.replace(hindi, arabic)
+    return text
+
+
 def extract_standard_number(filename: str) -> int:
-    match = re.search(r"معيار\s*\((\d+)\)", filename)
+    normalized = convert_hindi_to_arabic_numerals(filename)
+    
+    match = re.search(r"معيار\s*\((\d+)\)", normalized)
     if match:
         return int(match.group(1))
     
-    match = re.search(r"\((\d+)\)", filename)
+    match = re.search(r"معيار[–\-](\d+)", normalized)
     if match:
         return int(match.group(1))
     
-    match = re.search(r"(\d+)", filename)
+    match = re.search(r"المعيار[–\-]الشرعي[–\-]رقم[–\-](\d+)", normalized)
+    if match:
+        return int(match.group(1))
+    
+    match = re.search(r"\((\d+)\)", normalized)
+    if match:
+        return int(match.group(1))
+    
+    match = re.search(r"رقم[–\-](\d+)", normalized)
+    if match:
+        return int(match.group(1))
+    
+    match = re.search(r"(\d+)", normalized)
     if match:
         return int(match.group(1))
     

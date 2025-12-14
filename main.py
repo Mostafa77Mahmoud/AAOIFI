@@ -5,12 +5,13 @@ Processes 61 Sharia standards from PDF to MongoDB-ready JSON format.
 Uses Google Gemini 2.5 Flash for accurate text extraction.
 """
 
+import json
 import logging
 import re
 import sys
 from datetime import datetime
 from pathlib import Path
-from typing import List, Tuple
+from typing import List, Tuple, Set
 
 from src.config import (
     PDF_INPUT_DIR,
@@ -18,6 +19,7 @@ from src.config import (
     LOGS_DIR,
     TOTAL_STANDARDS,
     GEMINI_API_KEY,
+    PROGRESS_FILE,
 )
 from src.pdf_processor import process_pdf_with_gemini
 from src.json_builder import (
@@ -36,6 +38,33 @@ logging.basicConfig(
     ],
 )
 logger = logging.getLogger(__name__)
+
+
+def load_progress() -> Set[int]:
+    """Load the set of successfully processed standard numbers."""
+    if PROGRESS_FILE.exists():
+        try:
+            with open(PROGRESS_FILE, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+                return set(data.get('completed_standards', []))
+        except (json.JSONDecodeError, Exception) as e:
+            logger.warning(f"Could not load progress file: {e}")
+    return set()
+
+
+def save_progress(completed_standards: Set[int]) -> None:
+    """Save the set of successfully processed standard numbers."""
+    try:
+        data = {
+            'completed_standards': sorted(list(completed_standards)),
+            'last_updated': datetime.now().isoformat(),
+            'total_completed': len(completed_standards)
+        }
+        with open(PROGRESS_FILE, 'w', encoding='utf-8') as f:
+            json.dump(data, f, ensure_ascii=False, indent=2)
+        logger.info(f"Progress saved: {len(completed_standards)} standards completed")
+    except Exception as e:
+        logger.error(f"Could not save progress: {e}")
 
 
 def convert_hindi_to_arabic_numerals(text: str) -> str:
@@ -177,18 +206,43 @@ def main():
     
     logger.info(f"Found {len(pdf_files)} PDF files to process")
     
-    successful: List[int] = []
+    completed_standards = load_progress()
+    if completed_standards:
+        logger.info(f"Resuming from previous session: {len(completed_standards)} standards already completed")
+        print(f"\n✓ استكمال من الجلسة السابقة: {len(completed_standards)} معايير تمت معالجتها مسبقاً")
+        print(f"  Resuming: {len(completed_standards)} standards already processed")
+    
+    successful: List[int] = list(completed_standards)
     failed: List[Tuple[int, str]] = []
+    skipped_count = 0
+    newly_processed = 0
     
     for pdf_path in pdf_files:
+        standard_number = extract_standard_number(pdf_path.name)
+        
+        if standard_number in completed_standards:
+            logger.info(f"Skipping already processed standard {standard_number}: {pdf_path.name}")
+            skipped_count += 1
+            continue
+        
         success, message, standard_num = process_single_pdf(pdf_path)
         
         if success:
             successful.append(standard_num)
+            completed_standards.add(standard_num)
+            save_progress(completed_standards)
+            newly_processed += 1
             logger.info(f"Successfully processed standard {standard_num}")
         else:
             failed.append((standard_num, message))
             logger.error(f"Failed to process: {message}")
+    
+    if skipped_count > 0:
+        print(f"\n→ تم تخطي {skipped_count} معيار (معالجة سابقة)")
+        print(f"  Skipped {skipped_count} previously processed standards")
+    if newly_processed > 0:
+        print(f"→ تم معالجة {newly_processed} معيار جديد في هذه الجلسة")
+        print(f"  Processed {newly_processed} new standards in this session")
     
     print_summary(len(pdf_files), successful, failed, JSON_OUTPUT_DIR)
     

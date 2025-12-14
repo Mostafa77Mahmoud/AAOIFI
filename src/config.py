@@ -4,6 +4,7 @@ from pathlib import Path
 PDF_INPUT_DIR = Path("AAOIFI_Standards_Complete")
 JSON_OUTPUT_DIR = Path("json_standards")
 LOGS_DIR = Path("logs")
+PROGRESS_FILE = Path("processing_progress.json")
 
 PDF_INPUT_DIR.mkdir(exist_ok=True)
 JSON_OUTPUT_DIR.mkdir(exist_ok=True)

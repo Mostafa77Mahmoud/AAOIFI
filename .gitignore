@@ -30,6 +30,3 @@ logs/*.log
 .DS_Store
 *.swp
 *.swo
-
-json_standards/*.json
-AAOIFI_Standards_Complete/*.pdf
